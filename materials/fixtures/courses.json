@@ -1,0 +1,18 @@
+[
+    {
+        "model": "materials.course",
+        "pk": 1,
+        "fields": {
+            "title": "Курс по программированию",
+            "description": "Изучите основы программирования."
+        }
+    },
+    {
+        "model": "materials.course",
+        "pk": 2,
+        "fields": {
+            "title": "Курс по веб-разработке",
+            "description": "Создайте свой первый веб-сайт."
+        }
+    }
+]

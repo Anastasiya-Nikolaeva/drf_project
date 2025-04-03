@@ -1,0 +1,20 @@
+[
+    {
+        "model": "materials.lesson",
+        "pk": 1,
+        "fields": {
+            "title": "Введение в программирование",
+            "description": "Основные концепции программирования.",
+            "course": 1
+        }
+    },
+    {
+        "model": "materials.lesson",
+        "pk": 2,
+        "fields": {
+            "title": "Основы HTML",
+            "description": "Изучите основы разметки веб-страниц.",
+            "course": 2
+        }
+    }
+]
