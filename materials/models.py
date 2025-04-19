@@ -1,10 +1,14 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
+from materials.validators import validate_youtube_url
 
 
 class Course(models.Model):
     title = models.CharField(max_length=200)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
+    )
     preview_image = models.ImageField(
         upload_to="course_previews/", null=True, blank=True
     )
@@ -20,8 +24,24 @@ class Lesson(models.Model):
     preview_image = models.ImageField(
         upload_to="lesson_previews/", null=True, blank=True
     )
-    video_url = models.URLField(null=True, blank=True)
+    video_url = models.URLField(
+        validators=[validate_youtube_url], null=True, blank=True
+    )
     course = models.ForeignKey(Course, related_name="lessons", on_delete=models.CASCADE)
 
     def __str__(self):
         return self.title
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (
+            "user",
+            "course",
+        )  # Уникальность подписки для пользователя и курса
+
+    def __str__(self):
+        return f"{self.user.username} subscribed to {self.course.title}"

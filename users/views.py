@@ -5,8 +5,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from materials.models import Course, Lesson
+
 from .models import Payment, User
-from .serializers import PaymentSerializer, UserSerializer, UserRegisterSerializer
+from .serializers import (PaymentSerializer, UserRegisterSerializer,
+                          UserSerializer)
 
 
 class UserRegisterView(generics.CreateAPIView):
@@ -18,7 +20,6 @@ class UserRegisterView(generics.CreateAPIView):
 class UserProfileView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
@@ -43,29 +44,25 @@ class PaymentListView(generics.ListAPIView):
     filterset_class = PaymentFilter
     ordering_fields = ["payment_date"]
     ordering = ["payment_date"]
-    permission_classes = [IsAuthenticated]
 
 
 class PaymentCreateView(generics.CreateAPIView):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
 
 
 class PaymentDetailView(generics.RetrieveAPIView):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
 
 
 class PaymentDeleteView(generics.DestroyAPIView):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
-        response.data['username'] = request.data.get('username')
+        response.data["username"] = request.data.get("username")
         return response
