@@ -6,9 +6,28 @@ from materials.models import Course, Lesson
 
 
 class CustomUserManager(BaseUserManager):
+    """
+    Менеджер для пользовательской модели User.
+
+    Методы:
+        create_user: Создает и сохраняет обычного пользователя с указанным email и паролем.
+        create_superuser: Создает и сохраняет суперпользователя с указанным email и паролем.
+    """
+
     def create_user(self, email, password=None, **extra_fields):
+        """
+        Создает и сохраняет обычного пользователя с указанным email и паролем.
+
+        Аргументы:
+            email (str): Адрес электронной почты пользователя.
+            password (str, optional): Пароль пользователя.
+            **extra_fields: Дополнительные поля для пользователя.
+
+        Возвращает:
+            User: Созданный пользователь.
+        """
         if not email:
-            raise ValueError("The Email field must be set")
+            raise ValueError("Поле электронной почты должно быть задано")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -16,6 +35,17 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Создает и сохраняет суперпользователя с указанным email и паролем.
+
+        Аргументы:
+            email (str): Адрес электронной почты суперпользователя.
+            password (str, optional): Пароль суперпользователя.
+            **extra_fields: Дополнительные поля для суперпользователя.
+
+        Возвращает:
+            User: Созданный суперпользователь.
+        """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -23,6 +53,18 @@ class CustomUserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    """
+    Пользовательская модель пользователя.
+
+    Атрибуты:
+        username (str): Имя пользователя (по умолчанию "default_username").
+        email (str): Адрес электронной почты пользователя (уникальный).
+        phone (str): Номер телефона пользователя (необязательный).
+        city (str): Город пользователя (необязательный).
+        avatar (ImageField): Фото пользователя (необязательное).
+        is_active (bool): Указывает, активен ли пользователь.
+    """
+
     username = models.CharField(max_length=150, default="default_username")
     email = models.EmailField(
         unique=True, verbose_name="Почта", help_text="Укажите почту"
@@ -57,6 +99,18 @@ class User(AbstractUser):
 
 
 class Payment(models.Model):
+    """
+    Модель платежа.
+
+    Атрибуты:
+        user (User): Пользователь, который произвел платеж.
+        payment_date (DateField): Дата платежа.
+        paid_course (Course): Курс, за который был произведен платеж (необязательный).
+        paid_lesson (Lesson): Урок, за который был произведен платеж (необязательный).
+        amount (DecimalField): Сумма платежа.
+        payment_method (str): Метод платежа (наличные или перевод на счет).
+    """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name="payments", on_delete=models.CASCADE
     )
@@ -72,5 +126,11 @@ class Payment(models.Model):
         max_length=10, choices=[("cash", "Наличные"), ("transfer", "Перевод на счет")]
     )
 
-    def __str__(self):
-        return f"Payment by {self.user.email} for {self.paid_course or self.paid_lesson} on {self.payment_date}"
+    def __str__(self) -> str:
+        """
+        Возвращает строковое представление платежа.
+
+        Возвращает:
+            str: Строка, содержащая информацию о пользователе, курсе или уроке и дате платежа.
+        """
+        return f"Платеж от {self.user.email} за {self.paid_course or self.paid_lesson} от {self.payment_date}"
