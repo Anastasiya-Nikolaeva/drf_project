@@ -10,14 +10,33 @@ from users.permissions import IsModerator, IsOwner
 from .models import Course, Lesson, Subscription
 from .paginators import CustomPageNumberPagination
 from .serializers import CourseSerializer, LessonSerializer
+from .stripe_service import (create_checkout_session, create_price,
+                             create_product)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для управления курсами.
+
+    Доступные действия:
+        - list: Получить список курсов.
+        - retrieve: Получить курс по ID.
+        - create: Создать новый курс.
+        - update: Обновить существующий курс.
+        - destroy: Удалить курс.
+    """
+
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
+        """
+        Определяет разрешения для действий.
+
+        Возвращает:
+            list: Список разрешений для текущего действия.
+        """
         if self.action == "create":
             self.permission_classes = [permissions.IsAuthenticated]
         elif self.action == "destroy":
@@ -27,26 +46,52 @@ class CourseViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
+        """
+        Сохраняет курс с текущим пользователем как владельцем.
+
+        Аргументы:
+            serializer (CourseSerializer): Сериализатор курса.
+        """
         serializer.save(owner=self.request.user)
 
     def get_queryset(self):
+        """
+        Возвращает список курсов, принадлежащих текущему пользователю.
+
+        Возвращает:
+            QuerySet: Список курсов.
+        """
         if self.request.user.is_authenticated:
             return self.queryset.filter(owner=self.request.user)
         return self.queryset.none()
 
 
 class LessonListView(generics.ListAPIView):
+    """
+    View для получения списка уроков.
+    """
+
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     pagination_class = CustomPageNumberPagination
 
 
 class LessonCreateView(generics.CreateAPIView):
+    """
+    View для создания нового урока.
+    """
+
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
+        """
+        Сохраняет урок, проверяя, является ли пользователь владельцем курса.
+
+        Аргументы:
+            serializer (LessonSerializer): Сериализатор урока.
+        """
         course_id = self.request.data.get("course")
         course = Course.objects.get(id=course_id)
 
@@ -58,15 +103,29 @@ class LessonCreateView(generics.CreateAPIView):
 
 
 class LessonDetailView(generics.RetrieveAPIView):
+    """
+    View для получения деталей урока.
+    """
+
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
 
 
 class LessonUpdateView(generics.UpdateAPIView):
+    """
+    View для обновления существующего урока.
+    """
+
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
 
     def perform_update(self, serializer):
+        """
+        Обновляет урок, проверяя, является ли пользователь владельцем курса.
+
+        Аргументы:
+            serializer (LessonSerializer): Сериализатор урока.
+        """
         lesson = self.get_object()
         if lesson.course.owner != self.request.user:
             raise PermissionDenied("У вас нет прав на редактирование этого урока.")
@@ -74,17 +133,40 @@ class LessonUpdateView(generics.UpdateAPIView):
 
 
 class LessonDeleteView(generics.DestroyAPIView):
+    """
+    View для удаления урока.
+    """
+
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
 
     def perform_destroy(self, instance):
+        """
+        Удаляет урок, проверяя, является ли пользователь владельцем курса.
+
+        Аргументы:
+            instance (Lesson): Экземпляр урока для удаления.
+        """
         if instance.course.owner != self.request.user:
             raise PermissionDenied("У вас нет прав на редактирование этого урока.")
         instance.delete()
 
 
 class SubscriptionView(APIView):
+    """
+    View для управления подписками пользователей на курсы.
+    """
+
     def get_course(self, request):
+        """
+        Получает курс по ID из запроса.
+
+        Аргументы:
+            request (Request): Запрос от клиента.
+
+        Возвращает:
+            tuple: Кортеж из курса и возможного ответа с ошибкой.
+        """
         course_id = request.data.get("course_id") or request.query_params.get(
             "course_id"
         )
@@ -96,6 +178,15 @@ class SubscriptionView(APIView):
         return get_object_or_404(Course, id=course_id), None
 
     def post(self, request, *args, **kwargs):
+        """
+        Обрабатывает запрос на подписку или отписку от курса.
+
+        Аргументы:
+            request (Request): Запрос от клиента.
+
+        Возвращает:
+            Response: Ответ с сообщением о подписке или отписке.
+        """
         user = request.user
         if not user.is_authenticated:
             return Response(
@@ -120,16 +211,36 @@ class SubscriptionView(APIView):
         else:
             # Создаем новую подписку
             Subscription.objects.create(user=user, course=course_item)
+
+            # Создаем продукт и цену в Stripe
+            product = create_product(course_item.title)
+            price = create_price(
+                product.id, int(course_item.price * 100)
+            )  # Убедись, что у Course есть атрибут price
+
+            # Создаем сессию для оплаты
+            session = create_checkout_session(price.id)
+
             return Response(
                 {
                     "message": "Подписка на курс '{}' добавлена.".format(
                         course_item.title
-                    )
+                    ),
+                    "payment_url": session.url,  # Возвращаем ссылку на оплату
                 },
                 status=status.HTTP_201_CREATED,
             )
 
     def delete(self, request, *args, **kwargs):
+        """
+        Обрабатывает запрос на удаление подписки от курса.
+
+        Аргументы:
+            request (Request): Запрос от клиента.
+
+        Возвращает:
+            Response: Ответ с сообщением о результате удаления подписки.
+        """
         user = request.user
         if not user.is_authenticated:
             return Response(
