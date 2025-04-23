@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -118,3 +119,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"
 STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY")
+
+CELERY_BEAT_SCHEDULE = {
+    'run-every-minute': {
+        'task': 'your_app_name.tasks.my_periodic_task',
+        'schedule': crontab(),  # Запускать каждую минуту
+    },
+    'deactivate-inactive-users-every-day': {
+        'task': 'your_app_name.tasks.deactivate_inactive_users',
+        'schedule': crontab(hour=0, minute=0),  # Запускать каждый день в полночь
+    },
+}

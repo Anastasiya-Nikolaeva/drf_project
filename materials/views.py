@@ -65,6 +65,13 @@ class CourseViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(owner=self.request.user)
         return self.queryset.none()
 
+    def perform_update(self, serializer, send_course_update_email=None):
+        """
+        Обновляет курс и отправляет уведомления подписчикам.
+        """
+        course = serializer.save()
+        send_course_update_email.delay(course.id)
+
 
 class LessonListView(generics.ListAPIView):
     """
