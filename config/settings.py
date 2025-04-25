@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    'django_celery_beat',
     "users",
     "materials",
     "django_filters",
@@ -122,11 +123,11 @@ STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY")
 
 CELERY_BEAT_SCHEDULE = {
     'run-every-minute': {
-        'task': 'your_app_name.tasks.my_periodic_task',
+        'task': 'materials.tasks.my_periodic_task',
         'schedule': crontab(),  # Запускать каждую минуту
     },
     'deactivate-inactive-users-every-day': {
-        'task': 'your_app_name.tasks.deactivate_inactive_users',
+        'task': 'materials.tasks.deactivate_inactive_users',
         'schedule': crontab(hour=0, minute=0),  # Запускать каждый день в полночь
     },
 }
