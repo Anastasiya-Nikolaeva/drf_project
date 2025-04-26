@@ -12,6 +12,7 @@ from .paginators import CustomPageNumberPagination
 from .serializers import CourseSerializer, LessonSerializer
 from .stripe_service import (create_checkout_session, create_price,
                              create_product)
+from materials.tasks import send_course_update_email
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -64,6 +65,13 @@ class CourseViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             return self.queryset.filter(owner=self.request.user)
         return self.queryset.none()
+
+    def perform_update(self, serializer):
+        """
+        Обновляет курс и отправляет уведомления подписчикам.
+        """
+        course = serializer.save()
+        send_course_update_email.delay(course.id)
 
 
 class LessonListView(generics.ListAPIView):
